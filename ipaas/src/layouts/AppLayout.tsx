@@ -58,6 +58,7 @@ import { useOrgs } from '../hooks/useOrg';
 import { useBillingOrg } from '../hooks/useBillingOrg';
 import { isSupportedIntegration, GENERIC_SERVICE_TYPES } from '../constants/integrations';
 import { identifyIntegration } from '../utils/identifyIntegration';
+import { visibleComponentSettingsSections } from '../constants/componentSettingsSections';
 import { useOrgPermissions } from '../hooks/useAuth';
 import { switchOrgToken, useAuth } from '#auth';
 import {
@@ -85,13 +86,14 @@ import { useAccessControl } from '../contexts/AccessControlContext';
 
 // ComplexSelect is content-sized, and at org level there is no card beside the icon to stretch against.
 import { useLoadedImage } from '../hooks/useLoadedImage';
+import { withTrackParam } from '../hooks/useSelectedTrack';
 import { Permissions } from '../constants/permissions';
 import { DB_TRADEMARK_NOTICE } from '../constants/platformServices';
 import { UUID_RE, userInitials } from '../utils/string';
 
 export default function AppLayout(): JSX.Element {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const scope = useScope();
 
   const queryClient = useQueryClient();
@@ -335,7 +337,7 @@ export default function AppLayout(): JSX.Element {
     const url = navUrl(scope, id);
     if (!url) return;
     setPendingNavId(id);
-    navigateTo(url);
+    navigateTo(scope.level === 'components' ? withTrackParam(url, search) : url);
   };
 
   return (
@@ -827,6 +829,10 @@ export default function AppLayout(): JSX.Element {
                       // MCP (server + proxy): a single Test tab → the MCP playground
                       // (@wso2-org/mcp-playground). No Console/API-Chat sub-items.
                       const mcpType = integrationType === 'mcp-server' || integrationType === 'mcp-proxy';
+                      // Settings shows only when the integration has a section the user can open.
+                      const hasSettings =
+                        !!currentComponent &&
+                        visibleComponentSettingsSections(identifyIntegration(currentComponent.displayType ?? '', currentComponent.componentSubType ?? null), (perms) => hasAnyPermission(perms, projectId || undefined, componentId)).length > 0;
                       return [
                         <Sidebar.Category key="int-overview">
                           <Sidebar.Item id="overview">
@@ -952,6 +958,15 @@ export default function AppLayout(): JSX.Element {
                               <Sidebar.ItemLabel>Pipelines</Sidebar.ItemLabel>
                             </Sidebar.Item>
                           </Sidebar.Item>
+
+                          {hasSettings && (
+                            <Sidebar.Item id="component-settings">
+                              <Sidebar.ItemIcon>
+                                <Cog size={20} />
+                              </Sidebar.ItemIcon>
+                              <Sidebar.ItemLabel>Settings</Sidebar.ItemLabel>
+                            </Sidebar.Item>
+                          )}
                         </Sidebar.Category>,
                       ];
                     })()

@@ -17,6 +17,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { BffError } from '../api/_client';
 import { friendlyApiError, userFacingError } from './apiSecurity';
 
 const FALLBACK = 'Failed to save the security configuration.';
@@ -34,6 +35,12 @@ describe('friendlyApiError', () => {
 
   it('explains a 409 as a missing exposure', () => {
     expect(friendlyApiError(new Error('HTTP 409: not deployed'), FALLBACK)).toContain('expose it first');
+  });
+
+  it("shows the BFF's own sentence for a 409", () => {
+    const message = 'Set an API version on this deployment track before exposing its APIs';
+    expect(friendlyApiError(new BffError(409, JSON.stringify({ error: 'conflict', message })), FALLBACK)).toBe(message);
+    expect(friendlyApiError(new BffError(409, 'upstream conflict'), FALLBACK)).toContain('expose it first');
   });
 
   it('maps auth statuses without the caller context', () => {

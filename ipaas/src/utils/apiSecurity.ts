@@ -35,6 +35,17 @@ export function userFacingError(message: string, cause?: unknown): Error {
   return err;
 }
 
+/** The BFF's own sentence for a rejection, when its JSON envelope carried one; `BffError` puts it in `message`. */
+function bffSentence(error: unknown): string | null {
+  if (!(error instanceof Error) || error.name !== 'BffError') return null;
+  try {
+    const parsed = JSON.parse(String((error as { body?: unknown }).body)) as { message?: string; error?: string } | null;
+    return parsed?.message || parsed?.error ? error.message : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Turn a raw BFF failure into a message a user can act on.
  *
@@ -62,7 +73,8 @@ export function friendlyApiError(error: unknown, fallback: string): string {
     case 404:
       return `${fallback} This endpoint is not exposed as an API on the gateway yet.`;
     case 409:
-      return `${fallback} The endpoint is not exposed as an API yet — expose it first.`;
+      // A conflict names the state to fix (a deployment track with no API version, say), and only the BFF knows which.
+      return bffSentence(error) ?? `${fallback} The endpoint is not exposed as an API yet — expose it first.`;
     case 503:
       return 'The API gateway is unavailable right now. Try again in a moment.';
     default:

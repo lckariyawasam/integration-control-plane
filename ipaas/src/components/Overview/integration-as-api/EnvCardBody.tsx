@@ -23,7 +23,7 @@ import { useApiDefinition, useComponentDeployment, useEnvEndpoints } from '../..
 import { useEndpointSecurity } from '../../../hooks/useConsumers';
 import { useOrgUuid } from '../../../hooks/useOrgUuid';
 import type { EnvCardBodyProps } from '../../../types/integration';
-import { hasVersionedApis } from '../../../utils/deploymentTracks';
+import { trackApiVersionMissing } from '../../../utils/deploymentTracks';
 import EnvCardSkeleton from '../_shared/EnvCardSkeleton';
 import EndpointUrlsPanel from '../_shared/EndpointUrlsPanel';
 import ConsumersPanel from './ConsumersPanel';
@@ -82,8 +82,7 @@ export default function EnvCardBody({ component, env, prevEnv, projectId, versio
   }, [swagger, prevSwagger, prevEndpoint, prevEnv, loadingPrevSwagger]);
 
   // A tracked integration serves each track's APIs under the track's version, so a track without one exposes nothing.
-  const track = component.deploymentTracks?.find((t) => t.id === versionId);
-  const apiVersionMissing = !!component.deploymentTracksEnabled && hasVersionedApis(component) && !!track && !track.apiVersion;
+  const apiVersionMissing = trackApiVersionMissing(component, versionId);
 
   const showEndpointPanel = hasDeployment && !!envEndpoints.length;
   const serviceNotDeployed = !loadingDeployment && !hasDeployment;

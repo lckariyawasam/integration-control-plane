@@ -18,7 +18,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { apiVersionError, hasVersionedApis, nextApiVersion, trackBranchOptions } from './deploymentTracks';
+import { apiVersionError, hasVersionedApis, nextApiVersion, trackApiVersionMissing, trackBranchOptions } from './deploymentTracks';
 import type { DeploymentTrack } from '../types/component';
 
 const TRACKS: DeploymentTrack[] = [
@@ -88,11 +88,33 @@ describe('hasVersionedApis', () => {
   it.each([
     { displayType: 'ballerinaService', componentSubType: null, versioned: true },
     { displayType: 'miApiService', componentSubType: null, versioned: true },
-    { displayType: 'ballerinaService', componentSubType: 'rag-service', versioned: false },
-    { displayType: 'ballerinaService', componentSubType: 'MCP', versioned: false },
+    { displayType: 'ballerinaService', componentSubType: 'MCP', versioned: true },
     { displayType: 'ballerinaService', componentSubType: 'aiAgent', versioned: false },
     { displayType: 'scheduledTask', componentSubType: null, versioned: false },
-  ])('$displayType/$componentSubType → $versioned', ({ displayType, componentSubType, versioned }) => {
-    expect(hasVersionedApis({ displayType, componentSubType })).toBe(versioned);
+    { displayType: 'ballerinaEventHandler', componentSubType: null, versioned: false },
+  ])('$displayType/$componentSubType with tracks → $versioned', ({ displayType, componentSubType, versioned }) => {
+    expect(hasVersionedApis({ displayType, componentSubType, deploymentTracksEnabled: true })).toBe(versioned);
+  });
+
+  it('keeps an integration without tracks unversioned', () => {
+    expect(hasVersionedApis({ displayType: 'ballerinaService', componentSubType: null, deploymentTracksEnabled: false })).toBe(false);
+    expect(hasVersionedApis({ displayType: 'ballerinaService', componentSubType: 'MCP' })).toBe(false);
+  });
+});
+
+describe('trackApiVersionMissing', () => {
+  const mcp = { displayType: 'ballerinaService', componentSubType: 'MCP', deploymentTracksEnabled: true };
+  const tracks: DeploymentTrack[] = [
+    { id: 'main', branch: 'main', apiVersion: 'v1.0' },
+    { id: 'next', branch: 'next' },
+  ];
+
+  it('flags a track of an MCP server with no version', () => {
+    expect(trackApiVersionMissing({ ...mcp, deploymentTracks: tracks }, 'next')).toBe(true);
+    expect(trackApiVersionMissing({ ...mcp, deploymentTracks: tracks }, 'main')).toBe(false);
+  });
+
+  it('ignores integrations that serve no versioned APIs', () => {
+    expect(trackApiVersionMissing({ ...mcp, componentSubType: 'aiAgent', deploymentTracks: tracks }, 'next')).toBe(false);
   });
 });

@@ -68,12 +68,23 @@ export function apiVersionError(value: string, tracks: DeploymentTrack[], editin
   return null;
 }
 
+/** Integration types that serve their endpoints as APIs on the API Platform gateway. AI agents are fronted by the AI gateway instead. */
+const GATEWAY_API_TYPES = new Set(['integration-as-api', 'mcp-server', 'webhook']);
+
 /**
  * Integrations whose endpoints the gateway exposes as versioned APIs, where a
- * track's API version is part of its URL: an integration as API built with
- * Ballerina or MI.
+ * track's API version is part of its URL: every integration with deployment
+ * tracks that serves APIs on the gateway. An integration without tracks keeps
+ * one unversioned API per endpoint.
  */
-export function hasVersionedApis(component: Pick<Component, 'displayType' | 'componentSubType'>): boolean {
-  const { type, runtime } = identifyIntegration(component.displayType, component.componentSubType);
-  return type === 'integration-as-api' && (runtime === 'ballerina' || runtime === 'mi');
+export function hasVersionedApis(component: Pick<Component, 'displayType' | 'componentSubType' | 'deploymentTracksEnabled'>): boolean {
+  if (!component.deploymentTracksEnabled) return false;
+  return GATEWAY_API_TYPES.has(identifyIntegration(component.displayType, component.componentSubType).type);
+}
+
+/** Whether the track `trackId` names serves versioned APIs but has no version yet, so none of its endpoints is exposed. */
+export function trackApiVersionMissing(component: Pick<Component, 'displayType' | 'componentSubType' | 'deploymentTracksEnabled' | 'deploymentTracks'>, trackId: string | undefined): boolean {
+  if (!hasVersionedApis(component)) return false;
+  const track = component.deploymentTracks?.find((t) => t.id === trackId);
+  return !!track && !track.apiVersion;
 }

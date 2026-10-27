@@ -72,19 +72,21 @@ export function apiVersionError(value: string, tracks: DeploymentTrack[], editin
 const GATEWAY_API_TYPES = new Set(['integration-as-api', 'mcp-server', 'webhook']);
 
 /**
- * Integrations whose endpoints the gateway exposes as versioned APIs, where a
- * track's API version is part of its URL: every integration with deployment
- * tracks that serves APIs on the gateway. An integration without tracks keeps
- * one unversioned API per endpoint.
+ * Integrations whose deployment tracks show and set an API version: every
+ * integration that can have tracks and serves APIs on the gateway. A track's
+ * API version is part of its URL; the default track's is always v1.0.
  */
 export function hasVersionedApis(component: Pick<Component, 'displayType' | 'componentSubType' | 'deploymentTracksEnabled'>): boolean {
   if (!component.deploymentTracksEnabled) return false;
   return GATEWAY_API_TYPES.has(identifyIntegration(component.displayType, component.componentSubType).type);
 }
 
-/** Whether the track `trackId` names serves versioned APIs but has no version yet, so none of its endpoints is exposed. */
+/**
+ * Whether the track `trackId` names serves versioned APIs but has no version yet, so none of its
+ * endpoints is exposed. The default track always serves v1.0, so it never lacks one.
+ */
 export function trackApiVersionMissing(component: Pick<Component, 'displayType' | 'componentSubType' | 'deploymentTracksEnabled' | 'deploymentTracks'>, trackId: string | undefined): boolean {
   if (!hasVersionedApis(component)) return false;
   const track = component.deploymentTracks?.find((t) => t.id === trackId);
-  return !!track && !track.apiVersion;
+  return !!track && !track.latest && !track.apiVersion;
 }

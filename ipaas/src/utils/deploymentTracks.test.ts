@@ -96,7 +96,7 @@ describe('hasVersionedApis', () => {
     expect(hasVersionedApis({ displayType, componentSubType, deploymentTracksEnabled: true })).toBe(versioned);
   });
 
-  it('keeps an integration without tracks unversioned', () => {
+  it('shows no versions for an integration that can have no tracks', () => {
     expect(hasVersionedApis({ displayType: 'ballerinaService', componentSubType: null, deploymentTracksEnabled: false })).toBe(false);
     expect(hasVersionedApis({ displayType: 'ballerinaService', componentSubType: 'MCP' })).toBe(false);
   });
@@ -105,16 +105,21 @@ describe('hasVersionedApis', () => {
 describe('trackApiVersionMissing', () => {
   const mcp = { displayType: 'ballerinaService', componentSubType: 'MCP', deploymentTracksEnabled: true };
   const tracks: DeploymentTrack[] = [
-    { id: 'main', branch: 'main', apiVersion: 'v1.0' },
-    { id: 'next', branch: 'next' },
+    { id: 'uid-mcp', branch: 'main', latest: true, apiVersion: 'v1.0' },
+    { id: 'next', branch: 'next', apiVersion: 'v1.1' },
+    { id: 'later', branch: 'later' },
   ];
 
   it('flags a track of an MCP server with no version', () => {
-    expect(trackApiVersionMissing({ ...mcp, deploymentTracks: tracks }, 'next')).toBe(true);
-    expect(trackApiVersionMissing({ ...mcp, deploymentTracks: tracks }, 'main')).toBe(false);
+    expect(trackApiVersionMissing({ ...mcp, deploymentTracks: tracks }, 'later')).toBe(true);
+    expect(trackApiVersionMissing({ ...mcp, deploymentTracks: tracks }, 'next')).toBe(false);
+  });
+
+  it('never flags the default track, which always serves v1.0', () => {
+    expect(trackApiVersionMissing({ ...mcp, deploymentTracks: tracks }, 'uid-mcp')).toBe(false);
   });
 
   it('ignores integrations that serve no versioned APIs', () => {
-    expect(trackApiVersionMissing({ ...mcp, componentSubType: 'aiAgent', deploymentTracks: tracks }, 'next')).toBe(false);
+    expect(trackApiVersionMissing({ ...mcp, componentSubType: 'aiAgent', deploymentTracks: tracks }, 'later')).toBe(false);
   });
 });

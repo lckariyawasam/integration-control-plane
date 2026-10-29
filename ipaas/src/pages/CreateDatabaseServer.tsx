@@ -16,26 +16,29 @@
  * under the License.
  */
 
-import { Alert, Box, Button, CircularProgress, Grid, PageContent, Stack, Tooltip, Typography } from '@wso2/oxygen-ui';
-import { ArrowLeft } from '@wso2/oxygen-ui-icons-react';
+import { Alert, Box, Button, CircularProgress, Grid, PageContent, Stack, Typography } from '@wso2/oxygen-ui';
+import { ArrowLeft, Workflow } from '@wso2/oxygen-ui-icons-react';
 import { useState, type JSX } from 'react';
 import TextField from '../components/common/TextField';
 import SelectableCard from '../components/Databases/SelectableCard';
 import PlanCard from '../components/Databases/PlanCard';
+import TemporalPlanCard from '../components/Temporal/TemporalPlanCard';
 import { DatabasePlansSkeleton } from '../components/Databases/DatabaseSkeletons';
 import { useAppNavigate } from '../hooks/useAppNavigate';
 import { useCreateDatabaseServer, useDatabaseOffering, useDatabaseServers } from '../hooks/useDatabases';
-import { DATABASE_ENGINES } from '../constants/databases';
+import { useCreateTemporalServer, useTemporalOffering, useTemporalServers } from '../hooks/useTemporal';
+import { PLATFORM_SERVICE_TYPES, type PlatformServiceKind } from '../constants/databases';
 import { REQUIRED_FIELD_SX } from '../constants/styles';
 import { databaseNameError, toCreateDatabaseError } from '../utils/databases';
-import { databaseUrl, orgDatabasesUrl, type OrgScope } from '../nav';
-import type { DatabaseOffering } from '../types/databases';
+import { temporalNameError, toCreateTemporalError } from '../utils/temporal';
+import { databaseUrl, orgDatabasesUrl, temporalUrl, type OrgScope } from '../nav';
+import type { DatabasePlane } from '../types/databases';
 
 const assetUrl = (path: string): string => `${import.meta.env.BASE_URL}${path}`;
 const sectionHeadingSx = { fontWeight: 600, mb: 1.5 } as const;
 const fieldSx = { maxWidth: 480, ...REQUIRED_FIELD_SX } as const;
 
-function planeLabel(plane: NonNullable<DatabaseOffering['plane']>): string {
+function planeLabel(plane: DatabasePlane): string {
   const name = plane.displayName || plane.name;
   const where = [plane.region, plane.cloud?.toUpperCase()].filter(Boolean).join(', ');
   return where ? `${name} (${where})` : name;
@@ -43,25 +46,44 @@ function planeLabel(plane: NonNullable<DatabaseOffering['plane']>): string {
 
 export default function CreateDatabaseServer(scope: OrgScope): JSX.Element {
   const navigate = useAppNavigate();
-  const servers = useDatabaseServers();
-  const offering = useDatabaseOffering();
-  const create = useCreateDatabaseServer();
+  const [kind, setKind] = useState<PlatformServiceKind>('postgres');
+  const isTemporal = kind === 'temporal';
+
+  // Every service in the organization shares one namespace of names, whatever its type.
+  const databases = useDatabaseServers();
+  const temporals = useTemporalServers();
+  const dbOffering = useDatabaseOffering(!isTemporal);
+  const temporalOffering = useTemporalOffering(isTemporal);
+  const createDatabase = useCreateDatabaseServer();
+  const createTemporal = useCreateTemporalServer();
+  const create = isTemporal ? createTemporal : createDatabase;
 
   const [name, setName] = useState('');
   // An unset pick falls back to the provider's default plan, so the selection
   // is always a valid offering without syncing state to the fetched data.
   const [pickedPlan, setPickedPlan] = useState('');
 
-  const plans = offering.data?.plans ?? [];
-  const planId = plans.some((p) => p.id === pickedPlan) ? pickedPlan : (offering.data?.defaultPlan ?? plans[0]?.id ?? '');
+  const offering = isTemporal ? temporalOffering : dbOffering;
+  const planIds = (offering.data?.plans ?? []).map((p) => p.id);
+  const planId = planIds.includes(pickedPlan) ? pickedPlan : (offering.data?.defaultPlan ?? planIds[0] ?? '');
 
-  const takenNames = (servers.data ?? []).map((s) => s.name);
-  const nameError = databaseNameError(name, takenNames, offering.data?.maxNameLength);
+  const takenNames = [...(databases.data ?? []), ...(temporals.data ?? [])].map((s) => s.name);
+  const nameError = isTemporal ? temporalNameError(name, takenNames, offering.data?.maxNameLength) : databaseNameError(name, takenNames, offering.data?.maxNameLength);
   const canCreate = name !== '' && !nameError && !!planId && !create.isPending;
-  const createError = create.isError ? toCreateDatabaseError(create.error) : null;
+  const createError = create.isError ? (isTemporal ? toCreateTemporalError(create.error) : toCreateDatabaseError(create.error)) : null;
+
+  const pickKind = (next: PlatformServiceKind) => {
+    if (next === kind) return;
+    setKind(next);
+    setPickedPlan('');
+    createDatabase.reset();
+    createTemporal.reset();
+  };
 
   const submit = () => {
-    create.mutate({ name, plan: planId || undefined }, { onSuccess: (server) => navigate(databaseUrl(scope, server.id)) });
+    const input = { name, plan: planId || undefined };
+    if (isTemporal) createTemporal.mutate(input, { onSuccess: (server) => navigate(temporalUrl(scope, server.id)) });
+    else createDatabase.mutate(input, { onSuccess: (server) => navigate(databaseUrl(scope, server.id)) });
   };
 
   const typeAndName = (
@@ -70,24 +92,28 @@ export default function CreateDatabaseServer(scope: OrgScope): JSX.Element {
         Select Service Type
       </Typography>
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        {DATABASE_ENGINES.map((engine) => {
-          const card = <SelectableCard title={engine.name} description={engine.description} logo={assetUrl(engine.logo)} selected={engine.id === 'postgres'} disabled={!engine.available} onSelect={() => undefined} />;
-          return (
-            <Grid key={engine.id} size={{ xs: 12, sm: 4 }}>
-              {engine.available ? (
-                card
-              ) : (
-                <Tooltip title={`${engine.name} is not available yet.`}>
-                  <span>{card}</span>
-                </Tooltip>
-              )}
-            </Grid>
-          );
-        })}
+        {PLATFORM_SERVICE_TYPES.map((type) => (
+          <Grid key={type.id} size={{ xs: 12, sm: 4 }}>
+            <SelectableCard title={type.name} description={type.description} logo={type.logo && assetUrl(type.logo)} icon={<Workflow size={28} />} selected={type.id === kind} disabled={create.isPending} onSelect={() => pickKind(type.id)} />
+          </Grid>
+        ))}
       </Grid>
-      <TextField label="Name" required fullWidth value={name} onChange={(e) => setName(e.target.value)} error={!!nameError} helperText={nameError || 'Lowercase letters, digits and hyphens.'} sx={fieldSx} />
+      <TextField
+        label="Name"
+        required
+        fullWidth
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        error={!!nameError}
+        helperText={nameError || (isTemporal ? 'Lowercase letters, digits and hyphens, starting with a letter. The Temporal namespace takes this name.' : 'Lowercase letters, digits and hyphens.')}
+        sx={fieldSx}
+      />
     </>
   );
+
+  const plane = offering.data?.plane;
+  const runsOn = plane ? `, running on ${planeLabel(plane)}` : '';
+  const versionLine = isTemporal ? `Temporal ${temporalOffering.data?.temporalVersion ?? ''}`.trim() : `PostgreSQL ${dbOffering.data?.postgresVersion ?? ''}`.trim();
 
   const planSection = offering.isLoading ? (
     <DatabasePlansSkeleton />
@@ -101,23 +127,28 @@ export default function CreateDatabaseServer(scope: OrgScope): JSX.Element {
       }>
       Failed to load the service plans.
     </Alert>
-  ) : !plans.length ? (
+  ) : !planIds.length ? (
     <Alert severity="info">No service plans are offered.</Alert>
   ) : (
     <>
-      {/* The major is the deployment's choice (the BFF's PAAS_POSTGRES_VERSION), not the user's. */}
+      {/* The version is the provider's or the deployment's choice, not the user's. */}
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        PostgreSQL {offering.data?.postgresVersion}
-        {offering.data?.plane && `, running on ${planeLabel(offering.data.plane)}`}.
+        {versionLine}
+        {runsOn}.
       </Typography>
       <Typography variant="subtitle2" sx={sectionHeadingSx}>
         Select Service Plan
       </Typography>
       <Stack direction="row" gap={2} flexWrap="wrap">
-        {plans.map((plan) => (
-          <PlanCard key={plan.id} plan={plan} selected={planId === plan.id} onSelect={() => setPickedPlan(plan.id)} />
-        ))}
+        {isTemporal
+          ? temporalOffering.data?.plans.map((plan) => <TemporalPlanCard key={plan.id} plan={plan} selected={planId === plan.id} onSelect={() => setPickedPlan(plan.id)} />)
+          : dbOffering.data?.plans.map((plan) => <PlanCard key={plan.id} plan={plan} selected={planId === plan.id} onSelect={() => setPickedPlan(plan.id)} />)}
       </Stack>
+      {isTemporal && (
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+          A server keeps its plan&apos;s history shards for life, which bound its workflow throughput. Pick the plan for the throughput you will need.
+        </Typography>
+      )}
     </>
   );
 

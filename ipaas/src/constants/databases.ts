@@ -20,17 +20,21 @@ import type { DatabaseStatus } from '../types/databases';
 
 const DB_LOGO_BASE = 'assets/images/databases/';
 
-export interface DatabaseEngineOption {
-  id: 'postgres' | 'mysql' | 'cache';
+export type PlatformServiceKind = 'postgres' | 'temporal';
+
+export interface PlatformServiceTypeOption {
+  id: PlatformServiceKind;
   name: string;
   description: string;
-  /** Logo path, resolved against the app base URL by the UI. */
-  logo: string;
-  available: boolean;
+  /** Logo path, resolved against the app base URL by the UI; types without one show an icon. */
+  logo?: string;
 }
 
-/** Engines shown in the create wizard. Only provisionable engines are listed. */
-export const DATABASE_ENGINES: DatabaseEngineOption[] = [{ id: 'postgres', name: 'PostgreSQL', description: 'A highly performant, fully-managed object-relational database management system', logo: `${DB_LOGO_BASE}postgresql.svg`, available: true }];
+/** Service types shown on the create page. Only provisionable types are listed. */
+export const PLATFORM_SERVICE_TYPES: PlatformServiceTypeOption[] = [
+  { id: 'postgres', name: 'PostgreSQL', description: 'A highly performant, fully-managed object-relational database management system', logo: `${DB_LOGO_BASE}postgresql.svg` },
+  { id: 'temporal', name: 'Temporal', description: 'A fully-managed Temporal server for durable, long-running workflows' },
+];
 
 export const POSTGRES_LOGO = `${DB_LOGO_BASE}postgresql.svg`;
 

@@ -200,6 +200,11 @@ export function databaseUrl(scope: { org: string }, serverId: string, tab = 'ove
   return `${orgDatabasesUrl(scope)}/${encodeURIComponent(serverId)}/${tab}`;
 }
 
+/** A Temporal server's detail page, on one of its tabs. */
+export function temporalUrl(scope: { org: string }, serverId: string, tab = 'overview'): string {
+  return `${orgDatabasesUrl(scope)}/temporal/${encodeURIComponent(serverId)}/${tab}`;
+}
+
 /** The org Settings landing route — redirects to the first section the user can access. */
 export function orgSettingsUrl(scope: { org: string }): string {
   return `/organizations/${scope.org}/settings`;

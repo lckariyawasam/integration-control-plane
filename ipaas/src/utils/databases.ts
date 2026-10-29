@@ -30,7 +30,7 @@ export function databaseNameError(name: string, takenNames: readonly string[], m
   if (name === '') return '';
   if (!DATABASE_NAME_REGEX.test(name)) return 'Use lowercase letters, digits and hyphens, starting and ending with a letter or digit.';
   if (maxLength !== undefined && name.length > maxLength) return `Use at most ${maxLength} characters.`;
-  if (takenNames.includes(name)) return 'A database with this name already exists.';
+  if (takenNames.includes(name)) return 'A service with this name already exists.';
   return '';
 }
 

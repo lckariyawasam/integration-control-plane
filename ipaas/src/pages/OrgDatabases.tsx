@@ -21,39 +21,53 @@ import { Plus, RefreshCw } from '@wso2/oxygen-ui-icons-react';
 import type { JSX } from 'react';
 import { useAppNavigate } from '../hooks/useAppNavigate';
 import { useDatabaseAvailability, useDatabaseOffering, useDatabaseServers } from '../hooks/useDatabases';
-import { databaseUrl, newDatabaseUrl, type OrgScope } from '../nav';
-import DatabaseServersTable from '../components/Databases/DatabaseServersTable';
+import { useTemporalOffering, useTemporalServers } from '../hooks/useTemporal';
+import { databaseUrl, newDatabaseUrl, temporalUrl, type OrgScope } from '../nav';
+import PlatformServicesTable, { type ServiceRow } from '../components/Databases/PlatformServicesTable';
 import NoDatabaseServersBanner from '../components/Databases/NoDatabaseServersBanner';
 import { DatabaseListSkeleton } from '../components/Databases/DatabaseSkeletons';
 import type { DatabasePlan } from '../types/databases';
+import type { TemporalPlan } from '../types/temporal';
 
 const headerSx = { mb: 3 } as const;
-const NO_PLANS: readonly DatabasePlan[] = [];
+const NO_DATABASE_PLANS: readonly DatabasePlan[] = [];
+const NO_TEMPORAL_PLANS: readonly TemporalPlan[] = [];
 
 export default function OrgDatabases(scope: OrgScope): JSX.Element {
   const navigate = useAppNavigate();
+  // Every service type is provisioned through the same provider, so one availability answers for all.
   const availability = useDatabaseAvailability();
   const available = availability.data?.available === true;
-  const servers = useDatabaseServers(available);
-  // Describes each database's plan; until it loads (or if it fails) the list shows plan names alone.
-  const offering = useDatabaseOffering(available);
+  const databases = useDatabaseServers(available);
+  const temporals = useTemporalServers(available);
+  // Describe each service's plan; until they load (or if they fail) the list shows plan names alone.
+  const databaseOffering = useDatabaseOffering(available);
+  const temporalOffering = useTemporalOffering(available);
+  const lists = [databases, temporals];
+
+  const rows: ServiceRow[] = [...(databases.data ?? []).map((server): ServiceRow => ({ kind: 'postgres', server })), ...(temporals.data ?? []).map((server): ServiceRow => ({ kind: 'temporal', server }))].sort((a, b) =>
+    a.server.name.localeCompare(b.server.name),
+  );
 
   const create = () => navigate(newDatabaseUrl(scope));
+  const open = (row: ServiceRow) => navigate(row.kind === 'temporal' ? temporalUrl(scope, row.server.id) : databaseUrl(scope, row.server.id));
+  const refresh = () => lists.forEach((q) => q.refetch());
   const retry = () => {
     availability.refetch();
-    servers.refetch();
+    refresh();
   };
   const retryButton = (
     <Button color="inherit" size="small" onClick={retry}>
       Retry
     </Button>
   );
-  // A failed poll keeps the last good data, so the list (and any delete dialog open on it) stays up.
-  const failed = (availability.isError && !availability.data) || (available && servers.isError && !servers.data);
-  const stale = !failed && (availability.isError || (available && servers.isError));
+  // A failed poll keeps the last good data, so the list (and any delete dialog
+  // open on it) stays up; a type that failed to load hides only its own rows.
+  const failed = (availability.isError && !availability.data) || (available && lists.every((q) => q.isError && !q.data));
+  const stale = !failed && (availability.isError || (available && lists.some((q) => q.isError)));
 
   const body = (): JSX.Element => {
-    if (availability.isLoading || (available && servers.isLoading)) return <DatabaseListSkeleton />;
+    if (availability.isLoading || (available && lists.some((q) => q.isLoading))) return <DatabaseListSkeleton />;
     if (failed)
       return (
         <Alert severity="error" action={retryButton}>
@@ -61,8 +75,8 @@ export default function OrgDatabases(scope: OrgScope): JSX.Element {
         </Alert>
       );
     if (!available) return <Alert severity="info">Platform services are not available in this environment.</Alert>;
-    if (!servers.data?.length) return <NoDatabaseServersBanner onCreate={create} />;
-    return <DatabaseServersTable servers={servers.data} plans={offering.data?.plans ?? NO_PLANS} onOpenServer={(server) => navigate(databaseUrl(scope, server.id))} />;
+    if (!rows.length) return <NoDatabaseServersBanner onCreate={create} />;
+    return <PlatformServicesTable rows={rows} databasePlans={databaseOffering.data?.plans ?? NO_DATABASE_PLANS} temporalPlans={temporalOffering.data?.plans ?? NO_TEMPORAL_PLANS} onOpen={open} />;
   };
 
   return (
@@ -72,11 +86,11 @@ export default function OrgDatabases(scope: OrgScope): JSX.Element {
           <PageTitle.Header>Platform Services</PageTitle.Header>
           <PageTitle.SubHeader>Managed services your integrations can connect to.</PageTitle.SubHeader>
         </PageTitle>
-        {!!servers.data?.length && (
+        {rows.length > 0 && (
           <Stack direction="row" alignItems="center" gap={1}>
             <Tooltip title="Refresh">
               <span>
-                <IconButton size="small" aria-label="Refresh services" onClick={() => servers.refetch()} disabled={servers.isFetching}>
+                <IconButton size="small" aria-label="Refresh services" onClick={refresh} disabled={lists.some((q) => q.isFetching)}>
                   <RefreshCw size={16} />
                 </IconButton>
               </span>
@@ -89,7 +103,7 @@ export default function OrgDatabases(scope: OrgScope): JSX.Element {
       </Stack>
       {stale && (
         <Alert severity="warning" action={retryButton} sx={{ mb: 2 }}>
-          Couldn&apos;t refresh services. Showing the last loaded list.
+          Couldn&apos;t load or refresh some services. Showing what loaded.
         </Alert>
       )}
       {body()}

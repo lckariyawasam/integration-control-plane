@@ -60,6 +60,7 @@ const OrgDataPlanes = lazyPage(() => import('../pages/OrgDataPlanes'));
 const OrgDatabases = lazyPage(() => import('../pages/OrgDatabases'));
 const CreateDatabaseServer = lazyPage(() => import('../pages/CreateDatabaseServer'));
 const DatabaseServerDetail = lazyPage(() => import('../pages/DatabaseServerDetail'));
+const TemporalServerDetail = lazyPage(() => import('../pages/TemporalServerDetail'));
 const OrgPackageRegistries = lazyPage(() => import('../pages/OrgPackageRegistries'));
 const ComponentRuntime = lazyPage(() => import('../pages/ComponentRuntime'));
 const ProjectSettings = lazyPage(() => import('../pages/ProjectSettings'));
@@ -145,6 +146,8 @@ const routes: AppRoute[] = [
               { path: 'organizations/:orgHandler/platform-services/new', element: createElement(RouteErrorBoundary, null, createElement(withScope(CreateDatabaseServer, ['organizations']))) },
               { path: 'organizations/:orgHandler/platform-services/:dbServerId', element: createElement(RouteErrorBoundary, null, createElement(withScope(DatabaseServerDetail, ['organizations']))) },
               { path: 'organizations/:orgHandler/platform-services/:dbServerId/:tab', element: createElement(RouteErrorBoundary, null, createElement(withScope(DatabaseServerDetail, ['organizations']))) },
+              { path: 'organizations/:orgHandler/platform-services/temporal/:temporalId', element: createElement(RouteErrorBoundary, null, createElement(withScope(TemporalServerDetail, ['organizations']))) },
+              { path: 'organizations/:orgHandler/platform-services/temporal/:temporalId/:tab', element: createElement(RouteErrorBoundary, null, createElement(withScope(TemporalServerDetail, ['organizations']))) },
               { path: 'organizations/:orgHandler/settings', element: createElement(withScope(OrgSettings, ['organizations'])) },
               { path: 'organizations/:orgHandler/settings/package-registries', element: createElement(RouteErrorBoundary, null, createElement(withScope(OrgPackageRegistries, ['organizations']))) },
               ...generateMatrixRoutes(MATRIX),

@@ -55,6 +55,7 @@ import {
   ChevronDown,
   ChevronRight,
   Cog,
+  Database,
   FileLock,
   FlaskConical,
   Gauge,
@@ -724,6 +725,13 @@ export default function AppLayout(): JSX.Element {
                     </Sidebar.Category>,
 
                     <Sidebar.Category key="org-infra">
+                      {/* Managed services integrations connect to: databases today, caches and brokers to come. */}
+                      <Sidebar.Item id="org-platform-services">
+                        <Sidebar.ItemIcon>
+                          <Database size={20} />
+                        </Sidebar.ItemIcon>
+                        <Sidebar.ItemLabel>Platform Services</Sidebar.ItemLabel>
+                      </Sidebar.Item>
                       {/* Environments come before the pipelines that promote across them. */}
                       <Sidebar.Item id="org-admin">
                         <Sidebar.ItemIcon>
@@ -831,7 +839,7 @@ export default function AppLayout(): JSX.Element {
                           </Sidebar.Item>
 
                           {/* Day-2 operations on a running integration. Sits beside Observe rather than
-                              under Infrastructure, which is now just the environments and the pipeline. */}
+                              under Infrastructure, which holds the environments and the pipeline. */}
                           <Sidebar.Item id="operate">
                             <Sidebar.ItemIcon>
                               <SlidersHorizontal size={20} />
@@ -875,6 +883,13 @@ export default function AppLayout(): JSX.Element {
                         </Sidebar.Category>,
 
                         <Sidebar.Category key="int-infra">
+                          {/* Managed services integrations connect to: databases today, caches and brokers to come. */}
+                          <Sidebar.Item id="org-platform-services">
+                            <Sidebar.ItemIcon>
+                              <Database size={20} />
+                            </Sidebar.ItemIcon>
+                            <Sidebar.ItemLabel>Platform Services</Sidebar.ItemLabel>
+                          </Sidebar.Item>
                           <Sidebar.Item id="admin">
                             <Sidebar.ItemIcon>
                               <Settings2 size={20} />
@@ -953,6 +968,13 @@ export default function AppLayout(): JSX.Element {
                       </Sidebar.Category>,
 
                       <Sidebar.Category key="proj-infra">
+                        {/* Managed services integrations connect to: databases today, caches and brokers to come. */}
+                        <Sidebar.Item id="org-platform-services">
+                          <Sidebar.ItemIcon>
+                            <Database size={20} />
+                          </Sidebar.ItemIcon>
+                          <Sidebar.ItemLabel>Platform Services</Sidebar.ItemLabel>
+                        </Sidebar.Item>
                         {/* Environments link up to the org page; the pipeline is this project's own. */}
                         <Sidebar.Item id="proj-admin">
                           <Sidebar.ItemIcon>
@@ -1020,7 +1042,7 @@ export default function AppLayout(): JSX.Element {
       </AppShell.Main>
 
       <AppShell.Footer>
-        {pathname.includes('/admin/databases') && (
+        {pathname.includes('/platform-services') && (
           <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', fontStyle: 'italic', color: 'text.disabled', px: 2, pb: 1 }}>
             {DB_TRADEMARK_NOTICE}
           </Typography>

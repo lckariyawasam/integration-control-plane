@@ -22,16 +22,14 @@ import type { TemporalPlan } from '../types/temporal';
 
 /**
  * The provider's name rule for a Temporal server: a lowercase DNS label that
- * starts with a letter. The server's namespace is named after it, and a
- * namespace needs at least three characters.
+ * starts with a letter. Every server's namespace is "default", so the name is
+ * not held to Temporal's namespace rules.
  */
-export const TEMPORAL_NAME_REGEX = /^[a-z][a-z0-9-]*[a-z0-9]$/;
-const TEMPORAL_MIN_NAME_LENGTH = 3;
+export const TEMPORAL_NAME_REGEX = /^[a-z]([a-z0-9-]*[a-z0-9])?$/;
 
 /** The validation message for a Temporal server name, or '' when it is acceptable. */
 export function temporalNameError(name: string, takenNames: readonly string[], maxLength?: number): string {
   if (name === '') return '';
-  if (name.length < TEMPORAL_MIN_NAME_LENGTH) return `Use at least ${TEMPORAL_MIN_NAME_LENGTH} characters.`;
   if (!TEMPORAL_NAME_REGEX.test(name)) return 'Use lowercase letters, digits and hyphens, starting with a letter and ending with a letter or digit.';
   if (maxLength !== undefined && name.length > maxLength) return `Use at most ${maxLength} characters.`;
   if (takenNames.includes(name)) return 'A service with this name already exists.';

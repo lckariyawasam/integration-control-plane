@@ -105,7 +105,7 @@ export default function CreateDatabaseServer(scope: OrgScope): JSX.Element {
         value={name}
         onChange={(e) => setName(e.target.value)}
         error={!!nameError}
-        helperText={nameError || (isTemporal ? 'Lowercase letters, digits and hyphens, starting with a letter. The Temporal namespace takes this name.' : 'Lowercase letters, digits and hyphens.')}
+        helperText={nameError || (isTemporal ? 'Lowercase letters, digits and hyphens, starting with a letter. Workers use the namespace "default".' : 'Lowercase letters, digits and hyphens.')}
         sx={fieldSx}
       />
     </>

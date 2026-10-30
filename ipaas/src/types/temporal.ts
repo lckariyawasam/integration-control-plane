@@ -18,7 +18,7 @@
 
 /**
  * Managed Temporal servers, provisioned on WSO2 PaaS through the BFF. A server
- * belongs to the organization and runs one namespace, named after it.
+ * belongs to the organization and runs one namespace, "default".
  */
 
 import type { DatabaseAvailability, DatabasePlane, DatabaseStatus } from './databases';

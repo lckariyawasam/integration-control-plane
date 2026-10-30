@@ -24,15 +24,16 @@ import type { DatabasePlan } from '../../types/databases';
 interface PlanCardProps {
   plan: DatabasePlan;
   selected: boolean;
+  disabled?: boolean;
   onSelect: () => void;
 }
 
 /** A selectable service-plan card showing the plan's per-node size and list price. */
-export default function PlanCard({ plan, selected, onSelect }: PlanCardProps): JSX.Element {
+export default function PlanCard({ plan, selected, disabled, onSelect }: PlanCardProps): JSX.Element {
   const price = planPrice(plan);
   return (
-    <Card variant="outlined" sx={{ width: 240, borderColor: selected ? 'primary.main' : 'divider', borderWidth: selected ? 2 : 1 }}>
-      <CardActionArea onClick={onSelect} aria-pressed={selected} sx={{ p: 2, alignItems: 'flex-start' }}>
+    <Card variant="outlined" sx={{ width: 240, borderColor: selected ? 'primary.main' : 'divider', borderWidth: selected ? 2 : 1, opacity: disabled ? 0.5 : 1 }}>
+      <CardActionArea disabled={disabled} onClick={onSelect} aria-pressed={selected} sx={{ p: 2, alignItems: 'flex-start' }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
           {planLabel(plan.id)}
         </Typography>

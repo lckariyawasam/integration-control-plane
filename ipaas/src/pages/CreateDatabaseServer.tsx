@@ -46,13 +46,14 @@ function planeLabel(plane: DatabasePlane): string {
 
 export default function CreateDatabaseServer(scope: OrgScope): JSX.Element {
   const navigate = useAppNavigate();
-  const [kind, setKind] = useState<PlatformServiceKind>('postgres');
+  // No type is preselected: the name rules and the plans both depend on it.
+  const [kind, setKind] = useState<PlatformServiceKind | null>(null);
   const isTemporal = kind === 'temporal';
 
   // Every service in the organization shares one namespace of names, whatever its type.
   const databases = useDatabaseServers();
   const temporals = useTemporalServers();
-  const dbOffering = useDatabaseOffering(!isTemporal);
+  const dbOffering = useDatabaseOffering(kind === 'postgres');
   const temporalOffering = useTemporalOffering(isTemporal);
   const createDatabase = useCreateDatabaseServer();
   const createTemporal = useCreateTemporalServer();
@@ -69,7 +70,9 @@ export default function CreateDatabaseServer(scope: OrgScope): JSX.Element {
 
   const takenNames = [...(databases.data ?? []), ...(temporals.data ?? [])].map((s) => s.name);
   const nameError = isTemporal ? temporalNameError(name, takenNames, offering.data?.maxNameLength) : databaseNameError(name, takenNames, offering.data?.maxNameLength);
-  const canCreate = name !== '' && !nameError && !!planId && !create.isPending;
+  // Plans stay locked until the name is valid, so a missing name is never left behind a plan that already looks chosen.
+  const nameReady = name !== '' && !nameError;
+  const canCreate = nameReady && !!planId && !create.isPending;
   const createError = create.isError ? (isTemporal ? toCreateTemporalError(create.error) : toCreateDatabaseError(create.error)) : null;
 
   const pickKind = (next: PlatformServiceKind) => {
@@ -98,16 +101,19 @@ export default function CreateDatabaseServer(scope: OrgScope): JSX.Element {
           </Grid>
         ))}
       </Grid>
-      <TextField
-        label="Name"
-        required
-        fullWidth
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        error={!!nameError}
-        helperText={nameError || (isTemporal ? 'Lowercase letters, digits and hyphens, starting with a letter. Workers use the namespace "default".' : 'Lowercase letters, digits and hyphens.')}
-        sx={fieldSx}
-      />
+      {kind && (
+        <TextField
+          label="Name"
+          required
+          fullWidth
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          error={!!nameError}
+          helperText={nameError || (isTemporal ? 'Lowercase letters, digits and hyphens, starting with a letter. Workers use the namespace "default".' : 'Lowercase letters, digits and hyphens.')}
+          sx={fieldSx}
+        />
+      )}
     </>
   );
 
@@ -136,13 +142,18 @@ export default function CreateDatabaseServer(scope: OrgScope): JSX.Element {
         {versionLine}
         {runsOn}.
       </Typography>
-      <Typography variant="subtitle2" sx={sectionHeadingSx}>
+      <Typography variant="subtitle2" sx={{ ...sectionHeadingSx, mb: nameReady ? sectionHeadingSx.mb : 0.5 }}>
         Select Service Plan
       </Typography>
+      {!nameReady && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          Enter a valid name to choose a plan.
+        </Typography>
+      )}
       <Stack direction="row" gap={2} flexWrap="wrap">
         {isTemporal
-          ? temporalOffering.data?.plans.map((plan) => <TemporalPlanCard key={plan.id} plan={plan} selected={planId === plan.id} onSelect={() => setPickedPlan(plan.id)} />)
-          : dbOffering.data?.plans.map((plan) => <PlanCard key={plan.id} plan={plan} selected={planId === plan.id} onSelect={() => setPickedPlan(plan.id)} />)}
+          ? temporalOffering.data?.plans.map((plan) => <TemporalPlanCard key={plan.id} plan={plan} selected={nameReady && planId === plan.id} disabled={!nameReady || create.isPending} onSelect={() => setPickedPlan(plan.id)} />)
+          : dbOffering.data?.plans.map((plan) => <PlanCard key={plan.id} plan={plan} selected={nameReady && planId === plan.id} disabled={!nameReady || create.isPending} onSelect={() => setPickedPlan(plan.id)} />)}
       </Stack>
       {isTemporal && (
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
@@ -173,7 +184,7 @@ export default function CreateDatabaseServer(scope: OrgScope): JSX.Element {
         )}
 
         {typeAndName}
-        <Box sx={{ mt: 4 }}>{planSection}</Box>
+        {kind && <Box sx={{ mt: 4 }}>{planSection}</Box>}
 
         <Stack direction="row" gap={1.5} sx={{ mt: 4 }}>
           <Button variant="contained" disabled={!canCreate} startIcon={create.isPending ? <CircularProgress size={16} color="inherit" /> : undefined} onClick={submit}>

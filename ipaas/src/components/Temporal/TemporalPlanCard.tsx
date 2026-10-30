@@ -24,15 +24,16 @@ import type { TemporalPlan } from '../../types/temporal';
 interface TemporalPlanCardProps {
   plan: TemporalPlan;
   selected: boolean;
+  disabled?: boolean;
   onSelect: () => void;
 }
 
 /** A selectable Temporal plan card showing the plan's size, throughput and list price. */
-export default function TemporalPlanCard({ plan, selected, onSelect }: TemporalPlanCardProps): JSX.Element {
+export default function TemporalPlanCard({ plan, selected, disabled, onSelect }: TemporalPlanCardProps): JSX.Element {
   const price = planPrice(plan);
   return (
-    <Card variant="outlined" sx={{ width: 240, borderColor: selected ? 'primary.main' : 'divider', borderWidth: selected ? 2 : 1 }}>
-      <CardActionArea onClick={onSelect} aria-pressed={selected} sx={{ p: 2, alignItems: 'flex-start' }}>
+    <Card variant="outlined" sx={{ width: 240, borderColor: selected ? 'primary.main' : 'divider', borderWidth: selected ? 2 : 1, opacity: disabled ? 0.5 : 1 }}>
+      <CardActionArea disabled={disabled} onClick={onSelect} aria-pressed={selected} sx={{ p: 2, alignItems: 'flex-start' }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
           {planLabel(plan.id)}
         </Typography>

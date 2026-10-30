@@ -143,15 +143,15 @@ export default function DatabaseServerDetail(scope: OrgScope): JSX.Element {
         </Alert>
       )}
 
-      {service.status === 'CREATING' ? (
-        <Alert severity="info">
+      {service.status === 'CREATING' && (
+        <Alert severity="info" sx={{ mb: 2 }}>
           This database is being created. This usually takes a few minutes.
           <br />
           Some features and settings will be disabled until it is active.
         </Alert>
-      ) : (
-        <TabContent tab={activeTab} service={service} onRefresh={() => refetch()} isRefreshing={isFetching} onDeleted={() => navigate(orgDatabasesUrl(scope))} />
       )}
+      {/* Advanced Settings stays reachable while creating: it is where a create that hangs gets deleted. */}
+      {(service.status !== 'CREATING' || activeTab === 'advanced') && <TabContent tab={activeTab} service={service} onRefresh={() => refetch()} isRefreshing={isFetching} onDeleted={() => navigate(orgDatabasesUrl(scope))} />}
     </PageContent>
   );
 }

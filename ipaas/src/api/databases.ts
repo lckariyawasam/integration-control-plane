@@ -134,10 +134,11 @@ export const createDatabaseServer = (input: CreateDatabaseInput): Promise<Databa
 // Each call asks the provider for the credentials again; the BFF keeps nothing.
 export const revealDatabaseCredentials = (serverId: string): Promise<DatabaseCredentials> => bff.get<BffCredentials>(`/db-servers/${seg(serverId)}/credentials`);
 
-// Turns on daily backups at the BFF's fixed retention. The provider applies it
-// asynchronously; the server detail shows it once it lands.
 // Starts tearing the database down, its backups with it. It lists as DELETING
 // until the provider finishes, then drops out of the list.
 export const deleteDatabaseServer = (serverId: string): Promise<void> => bff.delete<void>(`/db-servers/${seg(serverId)}`);
+
+// Turns on daily backups at the BFF's fixed retention. The provider applies it
+// asynchronously; the server detail shows it once it lands.
 
 export const enableDatabaseBackups = (serverId: string): Promise<DatabaseBackupPolicy> => bff.post<DatabaseBackupPolicy>(`/db-servers/${seg(serverId)}/backups/enable`);

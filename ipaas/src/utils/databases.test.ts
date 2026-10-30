@@ -19,21 +19,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { BffError } from '../api/_client';
-import {
-  caCertificateFileName,
-  cpuLabel,
-  databaseBackupView,
-  databaseNameError,
-  isDatabaseOpenable,
-  isTransitionalBackupState,
-  isTransitionalDatabaseStatus,
-  memoryLabel,
-  nodeDescription,
-  planLabel,
-  planPrice,
-  planSpecLine,
-  toCreateDatabaseError,
-} from './databases';
+import { caCertificateFileName, cpuLabel, databaseBackupView, databaseNameError, isDatabaseOpenable, isBackupStarting, isTransitionalDatabaseStatus, memoryLabel, nodeDescription, planLabel, planPrice, planSpecLine, toCreateDatabaseError } from './databases';
 
 describe('databaseNameError', () => {
   it.each([
@@ -165,9 +151,16 @@ describe('databaseBackupView', () => {
     expect(databaseBackupView(on('Configured'), false, false).kind).toBe('on');
   });
 
-  it('polls faster only while backups are starting', () => {
-    expect(isTransitionalBackupState('FirstBackupPending')).toBe(true);
-    expect(isTransitionalBackupState('Configured')).toBe(false);
-    expect(isTransitionalBackupState(undefined)).toBe(false);
+  it('polls faster only while enabled backups are starting', () => {
+    const enabled = (backupState?: string) => ({ backup: { enabled: true }, backupState });
+    expect(isBackupStarting(enabled('FirstBackupPending'))).toBe(true);
+    // The minute right after enabling, before the provider schedules them.
+    expect(isBackupStarting(enabled('NotScheduled'))).toBe(true);
+    expect(isBackupStarting(enabled('Configured'))).toBe(false);
+    expect(isBackupStarting(enabled(undefined))).toBe(false);
+    // Backups off reads NotScheduled too; that must not poll fast forever.
+    expect(isBackupStarting({ backup: { enabled: false }, backupState: 'NotScheduled' })).toBe(false);
+    expect(isBackupStarting({ backupState: 'NotScheduled' })).toBe(false);
+    expect(isBackupStarting(undefined)).toBe(false);
   });
 });

@@ -19,7 +19,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createDatabaseServer, deleteDatabaseServer, enableDatabaseBackups, fetchDatabaseAvailability, fetchDatabaseOffering, fetchDatabaseServer, fetchDatabaseServers, revealDatabaseCredentials } from '../api/databases';
 import type { CreateDatabaseInput, DatabaseServer } from '../types/databases';
-import { isTransitionalBackupState, isTransitionalDatabaseStatus } from '../utils/databases';
+import { isBackupStarting, isTransitionalDatabaseStatus } from '../utils/databases';
 
 const ROOT_KEY = 'databases';
 const TRANSITION_POLL_MS = 10_000;
@@ -58,7 +58,7 @@ export function useDatabaseServer(serverId: string) {
     queryKey: [ROOT_KEY, 'server', serverId],
     queryFn: () => fetchDatabaseServer(serverId),
     enabled: !!serverId,
-    refetchInterval: (query) => (query.state.data?.reconciling || isTransitionalBackupState(query.state.data?.backupState) ? TRANSITION_POLL_MS : pollFor(query.state.data ? [query.state.data] : undefined)),
+    refetchInterval: (query) => (query.state.data?.reconciling || isBackupStarting(query.state.data) ? TRANSITION_POLL_MS : pollFor(query.state.data ? [query.state.data] : undefined)),
   });
 }
 

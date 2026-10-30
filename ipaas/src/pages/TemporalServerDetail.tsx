@@ -150,16 +150,18 @@ export default function TemporalServerDetail(scope: OrgScope): JSX.Element {
         </Alert>
       )}
 
-      {service.status === 'CREATING' ? (
-        <Alert severity="info">
+      {service.status === 'CREATING' && (
+        <Alert severity="info" sx={{ mb: 2 }}>
           This Temporal server is being created. This usually takes a few minutes.
           <br />
           Its address and API key will be available once it is active.
         </Alert>
-      ) : activeTab === 'overview' ? (
-        <TemporalOverviewTab service={service} plan={offering.data?.plans.find((p) => p.id === service.plan)} onRefresh={() => refetch()} isRefreshing={isFetching} />
-      ) : (
+      )}
+      {/* Advanced Settings stays reachable while creating: it is where a create that hangs gets deleted. */}
+      {activeTab !== 'overview' ? (
         <AdvancedSettings service={service} onDeleted={() => navigate(orgDatabasesUrl(scope))} />
+      ) : (
+        service.status !== 'CREATING' && <TemporalOverviewTab service={service} plan={offering.data?.plans.find((p) => p.id === service.plan)} onRefresh={() => refetch()} isRefreshing={isFetching} />
       )}
     </PageContent>
   );

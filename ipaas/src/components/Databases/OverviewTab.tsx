@@ -21,7 +21,7 @@ import { Archive, Cpu, Download, Eye, EyeOff, HardDrive, MemoryStick, Power, Ref
 import { useState, type JSX, type ReactNode } from 'react';
 import { useRevealDatabaseCredentials } from '../../hooks/useDatabases';
 import { DATABASE_STATUS_COLORS, DATABASE_STATUS_LABELS, DATABASE_UNAVAILABLE } from '../../constants/databases';
-import { caCertificateFileName, nodeDescription, planLabel } from '../../utils/databases';
+import { caCertificateFileName, cpuLabel, memoryLabel, nodeDescription, planLabel } from '../../utils/databases';
 import CopyField from './CopyField';
 import DetailRow from './DetailRow';
 import type { DatabaseCredentials, DatabaseServerDetail } from '../../types/databases';
@@ -49,7 +49,9 @@ function saveCaCertificate(databaseName: string, certificate: string): void {
   a.href = url;
   a.download = caCertificateFileName(databaseName);
   a.click();
-  URL.revokeObjectURL(url);
+  // Revoked on the next task: some browsers start the download only after
+  // the click handler returns, and a revoked URL then saves nothing.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 interface OverviewTabProps {
@@ -61,7 +63,9 @@ interface OverviewTabProps {
 export default function OverviewTab({ service, onRefresh, isRefreshing }: OverviewTabProps): JSX.Element {
   const reveal = useRevealDatabaseCredentials(service.id);
   // The certificate comes from the same provider call as the credentials, but
-  // through its own mutation so that downloading it never puts the credentials on screen.
+  // through its own mutation so that downloading it never puts the credentials
+  // on screen. The mutation is reset once the file is saved, so the password
+  // that came with it is not kept either.
   const caFetch = useRevealDatabaseCredentials(service.id);
   const busy = reveal.isPending || caFetch.isPending;
   const [showPassword, setShowPassword] = useState(false);
@@ -77,7 +81,8 @@ export default function OverviewTab({ service, onRefresh, isRefreshing }: Overvi
         if (!c.caCertificate) throw new Error('no CA certificate');
         saveCaCertificate(service.name, c.caCertificate);
       })
-      .catch(() => setCaError(true));
+      .catch(() => setCaError(true))
+      .finally(() => caFetch.reset());
   };
 
   const hideCredentials = () => {
@@ -208,12 +213,12 @@ export default function OverviewTab({ service, onRefresh, isRefreshing }: Overvi
           )}
           {service.cpu && (
             <PlanStat icon={<Cpu size={15} />} label="CPU per node">
-              {service.cpu}
+              {cpuLabel(service.cpu)}
             </PlanStat>
           )}
           {service.memory && (
             <PlanStat icon={<MemoryStick size={15} />} label="Memory per node">
-              {service.memory}
+              {memoryLabel(service.memory)}
             </PlanStat>
           )}
           {service.storageGi !== undefined && (
@@ -222,7 +227,7 @@ export default function OverviewTab({ service, onRefresh, isRefreshing }: Overvi
             </PlanStat>
           )}
           <PlanStat icon={<Archive size={15} />} label="Backups">
-            {service.backup?.enabled ? `Daily, kept ${service.backup.retentionDays ?? 7} days` : 'No automatic backups'}
+            {service.backup?.enabled ? `Daily${service.backup.retentionDays ? `, kept ${service.backup.retentionDays} days` : ''}` : 'No automatic backups'}
           </PlanStat>
         </Stack>
       </Box>

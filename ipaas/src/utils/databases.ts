@@ -45,12 +45,18 @@ export type DatabaseBackupView = { kind: 'notOffered' } | { kind: 'off' } | { ki
 
 // The provider's backupState values. Archiving and the first base backup take
 // a few minutes after backups are turned on; until both land, nothing can be
-// restored yet.
-const BACKUP_STARTING_STATES = ['ArchivingPending', 'FirstBackupPending'];
+// restored yet. Right after enabling, the policy is already stored while the
+// observed state still reads NotScheduled for about a minute, so with backups
+// on it counts as starting too.
+const BACKUP_STARTING_STATES = ['ArchivingPending', 'FirstBackupPending', 'NotScheduled'];
 const BACKUP_FAILING_STATES = ['ArchivingFailed', 'BackupFailed', 'BackupStoreError', 'NoPlaneStore'];
 
-/** Backup states the provider is still working through; the detail page polls faster while one shows. */
-export const isTransitionalBackupState = (state: string | undefined): boolean => state !== undefined && BACKUP_STARTING_STATES.includes(state);
+/**
+ * Whether enabled backups are still starting; the detail page polls faster
+ * while they are. NotScheduled alone means nothing: a database with backups
+ * off reads it too.
+ */
+export const isBackupStarting = (service: Pick<DatabaseServerDetail, 'backup' | 'backupState'> | undefined): boolean => !!service?.backup?.enabled && BACKUP_STARTING_STATES.includes(service.backupState ?? '');
 
 /**
  * The Backups tab's state. `planOffersBackups` is undefined while the offering
@@ -60,11 +66,7 @@ export const isTransitionalBackupState = (state: string | undefined): boolean =>
  */
 export function databaseBackupView(service: Pick<DatabaseServerDetail, 'backup' | 'backupState' | 'lastBackupAt'>, planOffersBackups: boolean | undefined, enableRequested: boolean): DatabaseBackupView {
   if (service.backup?.enabled) {
-    const state = service.backupState ?? '';
-    // Right after enabling, the policy is already stored while the observed
-    // state still reads NotScheduled for about a minute.
-    const starting = BACKUP_STARTING_STATES.includes(state) || state === 'NotScheduled';
-    const health = BACKUP_FAILING_STATES.includes(state) ? 'failing' : starting ? 'starting' : 'ok';
+    const health = BACKUP_FAILING_STATES.includes(service.backupState ?? '') ? 'failing' : isBackupStarting(service) ? 'starting' : 'ok';
     return { kind: 'on', health, retentionDays: service.backup.retentionDays, lastBackupAt: service.lastBackupAt };
   }
   if (planOffersBackups === false) return { kind: 'notOffered' };

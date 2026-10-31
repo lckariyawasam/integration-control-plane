@@ -41,3 +41,9 @@ describe('identifyIntegration — existing types still resolve', () => {
     expect(identifyIntegration('ballerinaService', 'tailscale').type).toBe('tailscale-vpn');
   });
 });
+
+describe('identifyIntegration — workflow', () => {
+  it('resolves the workflow display type to a Ballerina workflow', () => {
+    expect(identifyIntegration('ballerinaWorkflow', null)).toMatchObject({ type: 'workflow', runtime: 'ballerina' });
+  });
+});

@@ -25,12 +25,14 @@ import { INTEGRATION_TYPES } from '../../constants/import';
 interface IntegrationTypeSelectorProps {
   selected: IntegrationType | null;
   onSelect: (type: IntegrationType) => void;
+  /** Types this create cannot offer, such as one the chosen technology does not support. */
+  hidden?: readonly IntegrationType[];
 }
 
-export default function IntegrationTypeSelector({ selected, onSelect }: IntegrationTypeSelectorProps): JSX.Element {
+export default function IntegrationTypeSelector({ selected, onSelect, hidden = [] }: IntegrationTypeSelectorProps): JSX.Element {
   return (
     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-      {INTEGRATION_TYPES.map((opt) => {
+      {INTEGRATION_TYPES.filter((opt) => !hidden.includes(opt.id)).map((opt) => {
         const isActive = selected === opt.id;
         return (
           <Card
@@ -61,18 +63,20 @@ export default function IntegrationTypeSelector({ selected, onSelect }: Integrat
                 <Typography variant="body2" fontWeight={600} sx={{ color: isActive ? 'primary.main' : 'text.primary' }}>
                   {opt.title}
                 </Typography>
-                <Tooltip title="View documentation" placement="top">
-                  <Box
-                    component="a"
-                    href={opt.docLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`View documentation for ${opt.title}`}
-                    onClick={(e: MouseEvent) => e.stopPropagation()}
-                    sx={{ display: 'flex', color: 'text.disabled', '&:hover': { color: 'text.secondary' }, ml: 0.5, flexShrink: 0 }}>
-                    <ExternalLink size={13} />
-                  </Box>
-                </Tooltip>
+                {opt.docLink && (
+                  <Tooltip title="View documentation" placement="top">
+                    <Box
+                      component="a"
+                      href={opt.docLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`View documentation for ${opt.title}`}
+                      onClick={(e: MouseEvent) => e.stopPropagation()}
+                      sx={{ display: 'flex', color: 'text.disabled', '&:hover': { color: 'text.secondary' }, ml: 0.5, flexShrink: 0 }}>
+                      <ExternalLink size={13} />
+                    </Box>
+                  </Tooltip>
+                )}
               </Box>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5, lineHeight: 1.4, flex: 1 }}>
                 {opt.description}

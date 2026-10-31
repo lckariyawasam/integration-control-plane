@@ -46,6 +46,7 @@ export const SUPPORTED_DISPLAY_TYPES = new Set([
   'miCronjob',
   'miJob',
   'miWebhook',
+  'ballerinaWorkflow',
   'byocWebhook',
   'buildpackWebhook',
   'ballerinaEventHandler',
@@ -119,6 +120,8 @@ export function getDisplayLabel(displayType: string, componentSubType: string | 
       return 'Automation';
     case 'manualTrigger':
       return 'Manual Trigger';
+    case 'ballerinaWorkflow':
+      return 'Workflow';
     case 'proxy':
     case 'gitProxy':
       return 'REST API Proxy';
@@ -169,6 +172,7 @@ export const COMPONENT_TYPE_LABELS: Record<string, string> = {
   'ai-agent': 'AI Agent',
   'event-handler': 'Event Integration',
   'file-integration': 'File Integration',
+  workflow: 'Workflow',
   'test-runner': 'Test Runner',
   'web-application': 'Web Application',
 };

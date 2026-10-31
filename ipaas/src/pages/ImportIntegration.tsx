@@ -50,6 +50,7 @@ import { toHandler, formatRepoNameToDisplayName } from '../utils/string';
 import { parseGitHubUrl } from '../utils/github';
 import { detectTechnology } from '../utils/technologyDetection';
 import { useProjectId } from '../hooks/useProjects';
+import { useWorkflowRuntime } from '../hooks/useWorkflowRuntime';
 
 export default function ImportIntegration(scope: ProjectScope): JSX.Element {
   const navigate = useAppNavigate();
@@ -81,7 +82,12 @@ export default function ImportIntegration(scope: ProjectScope): JSX.Element {
   const [description, setDescription] = useState('');
   const [detectedMode, setDetectedMode] = useState<DetectedMode>(null);
   const [selectedTechnology, setSelectedTechnology] = useState<'MI' | 'BI' | null>(null);
-  const [selectedIntegrationType, setSelectedIntegrationType] = useState<IntegrationType | null>(null);
+  const [pickedIntegrationType, setSelectedIntegrationType] = useState<IntegrationType | null>(null);
+  // Workflows are Ballerina only and need the platform's workflow runtime. A pick
+  // that a later technology change hides no longer counts as selected.
+  const { data: workflowRuntime } = useWorkflowRuntime();
+  const hiddenIntegrationTypes: IntegrationType[] = selectedTechnology === 'MI' || workflowRuntime?.status === 'NOT_CONFIGURED' ? ['workflow'] : [];
+  const selectedIntegrationType = pickedIntegrationType && !hiddenIntegrationTypes.includes(pickedIntegrationType) ? pickedIntegrationType : null;
   const [ballerinaTokenInput, setBallerinaTokenInput] = useState('');
   const [ballerinaDrawerOpen, setBallerinaDrawerOpen] = useState(false);
   const { data: ballerinaTokenStatus } = useBallerinaCentralToken();
@@ -284,6 +290,7 @@ export default function ImportIntegration(scope: ProjectScope): JSX.Element {
     if (selectedTechnology === 'BI') {
       if (selectedIntegrationType === 'automation') return 'scheduledTask';
       if (selectedIntegrationType === 'event-integration') return 'ballerinaEventHandler';
+      if (selectedIntegrationType === 'workflow') return 'ballerinaWorkflow';
       return 'ballerinaService';
     }
     if (selectedIntegrationType === 'automation') return 'miCronjob';
@@ -677,7 +684,9 @@ export default function ImportIntegration(scope: ProjectScope): JSX.Element {
               ? 'AI Agent'
               : selectedIntegrationType === 'mcp-server'
                 ? 'MCP Server'
-                : 'Integration as API';
+                : selectedIntegrationType === 'workflow'
+                  ? 'Workflow'
+                  : 'Integration as API';
     return (
       <PageContent sx={{ pt: 5, display: 'flex', flexDirection: 'column', flex: 1 }}>
         <IntegrationCreationLoader
@@ -785,7 +794,7 @@ export default function ImportIntegration(scope: ProjectScope): JSX.Element {
             <Typography variant="h5" sx={{ mb: 2, mt: 3 }}>
               Integration Type
             </Typography>
-            <IntegrationTypeSelector selected={selectedIntegrationType} onSelect={setSelectedIntegrationType} />
+            <IntegrationTypeSelector selected={selectedIntegrationType} onSelect={setSelectedIntegrationType} hidden={hiddenIntegrationTypes} />
           </Box>
         </BusyFields>
 

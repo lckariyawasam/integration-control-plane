@@ -33,6 +33,9 @@ export interface PrebuiltIntegration {
   imageUrl: string;
 }
 
+/** The fields needed to create a component from a prebuilt image; prebuilt integrations and image-backed samples both provide them. */
+export type PrebuiltImageSource = Pick<PrebuiltIntegration, 'displayName' | 'description' | 'componentType' | 'buildPack' | 'repositoryUrl' | 'branch' | 'componentPath' | 'imageUrl'>;
+
 export interface PrebuiltIntegrationsData {
   prebuiltIntegrations: PrebuiltIntegration[];
   applications: string[];
@@ -57,7 +60,7 @@ export interface PrebuiltDiagramResult {
 }
 
 export interface DeployPrebuiltIntegrationInput {
-  integration: PrebuiltIntegration;
+  integration: PrebuiltImageSource;
   orgHandler: string;
   projectId: string;
   configValues?: SchemaConfigItem[];

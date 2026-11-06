@@ -51,7 +51,8 @@ export function useDeployPrebuiltIntegration() {
   deployImageRef.current = deployImage;
   deleteComponentRef.current = deleteComponent;
 
-  const deploy = useCallback(async (input: DeployPrebuiltIntegrationInput) => {
+  // Resolves to the new component's handler, or null when the deploy failed and was rolled back.
+  const deploy = useCallback(async (input: DeployPrebuiltIntegrationInput): Promise<string | null> => {
     const { integration, orgHandler, projectId, configValues } = input;
     setState({ progress: 0, stepLabel: 'Checking name availability…', error: null, errorSeverity: 'error', isDeploying: true, isSuccess: false, componentHandler: null, configSaveError: false });
 
@@ -112,6 +113,7 @@ export function useDeployPrebuiltIntegration() {
       });
 
       setState((s) => ({ ...s, progress: 100, stepLabel: 'Deployed!', error: null, isDeploying: false, isSuccess: true, componentHandler: component.handler }));
+      return component.handler;
     } catch (err) {
       // Log the primary failure before rolling back — otherwise the actual cause
       // (name check, create, deploy, …) is lost and only the generic toast remains.
@@ -130,6 +132,7 @@ export function useDeployPrebuiltIntegration() {
         errorSeverity: isQuotaError(err) ? 'warning' : 'error',
         isDeploying: false,
       }));
+      return null;
     }
   }, []);
 

@@ -21,17 +21,15 @@ import TextField from '../components/common/TextField';
 import { ArrowLeft, Search } from '@wso2/oxygen-ui-icons-react';
 import { useState, useMemo, useEffect, type JSX } from 'react';
 import { useAppNavigate } from '../hooks/useAppNavigate';
-import { useCreateComponent } from '../hooks/useComponents';
-import { isQuotaError } from '../utils/apiErrors';
+import { useDeploySample } from '../hooks/useDeploySample';
 import FilterSection from '../components/FilterSection';
 import SampleGridCard from '../components/SampleGridCard';
 import IntegrationCreationLoader from '../components/IntegrationCreationLoader';
-import { componentSubTypeFromSample, displayTypeFromSample, formatComponentType, normalizeComponentType } from '../constants/integrations';
+import { formatComponentType, normalizeComponentType } from '../constants/integrations';
 import { PAGE_SIZE } from '../constants/samples';
 import { useSamples } from '../hooks/useSamples';
 import { resourceUrl, narrow, newComponentUrl, type ProjectScope } from '../nav';
 import type { Sample } from '../types/samples';
-import { toHandler } from '../utils/string';
 import { useProjectId } from '../hooks/useProjects';
 
 export default function BrowseSamples(scope: ProjectScope): JSX.Element {
@@ -57,31 +55,18 @@ export default function BrowseSamples(scope: ProjectScope): JSX.Element {
     });
   };
 
-  const createComponent = useCreateComponent();
+  const sampleDeploy = useDeploySample();
 
   const handleDeploy = (sample: Sample) => {
     if (!projectId) return;
     setDeployingSample(sample.displayName);
-    createComponent.mutate(
-      {
-        displayName: sample.displayName,
-        name: toHandler(sample.displayName),
-        description: sample.description,
-        orgHandler: scope.org,
-        projectId,
-        displayType: displayTypeFromSample(sample.componentType, sample.buildPack),
-        componentSubType: componentSubTypeFromSample(sample.componentType, sample.buildPack),
-        srcGitRepoUrl: sample.repositoryUrl,
-        repositorySubPath: `${sample.subDirectory ?? ''}${sample.componentPath}`,
-        repositoryBranch: sample.branch ?? 'main',
-        isPublicRepo: true,
-        enableAutoDeploy: true,
-      },
-      {
-        onSuccess: (component) => navigate(resourceUrl(narrow(scope, component.handler), 'overview')),
-        onError: () => setDeployingSample(null),
-      },
-    );
+    void sampleDeploy.deploy({
+      sample,
+      orgHandler: scope.org,
+      projectId,
+      onSuccess: (handler) => navigate(resourceUrl(narrow(scope, handler), 'overview')),
+      onError: () => setDeployingSample(null),
+    });
   };
 
   const filtered = useMemo(() => {
@@ -122,18 +107,18 @@ export default function BrowseSamples(scope: ProjectScope): JSX.Element {
     );
   }
 
-  if (createComponent.isPending || createComponent.isSuccess || createComponent.isError) {
+  if (sampleDeploy.isActive) {
     return (
       <PageContent sx={{ pt: 5, display: 'flex', flexDirection: 'column', flex: 1 }}>
         <IntegrationCreationLoader
           label="Integration"
           subLabel={deployingSample || undefined}
-          isPending={createComponent.isPending}
-          isSuccess={createComponent.isSuccess}
-          error={createComponent.isError ? (createComponent.error?.message ?? 'Something went wrong. Please try again.') : null}
-          errorSeverity={isQuotaError(createComponent.error) ? 'warning' : 'error'}
+          isPending={sampleDeploy.isPending}
+          isSuccess={sampleDeploy.isSuccess}
+          error={sampleDeploy.error}
+          errorSeverity={sampleDeploy.errorSeverity}
           onBack={() => {
-            createComponent.reset();
+            sampleDeploy.reset();
             setDeployingSample(null);
           }}
         />
